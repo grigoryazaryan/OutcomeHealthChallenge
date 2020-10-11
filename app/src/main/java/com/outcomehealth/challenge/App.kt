@@ -1,13 +1,13 @@
 package com.outcomehealth.challenge
 
-import android.app.Application
+import androidx.multidex.MultiDexApplication
 import timber.log.Timber
 
 /**
  * Created by Grigory Azaryan on 10/9/20.
  */
 
-class App : Application() {
+class App : MultiDexApplication() {
 
     override fun onCreate() {
         super.onCreate()

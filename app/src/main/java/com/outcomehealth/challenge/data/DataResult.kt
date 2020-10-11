@@ -1,4 +1,4 @@
-package com.outcomehealth.challenge
+package com.outcomehealth.challenge.data
 
 /**
  * Created by Grigory Azaryan on 10/10/20.

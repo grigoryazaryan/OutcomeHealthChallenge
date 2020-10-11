@@ -1,6 +1,8 @@
-package com.outcomehealth.challenge
+package com.outcomehealth.challenge.viewmodel
 
 import androidx.lifecycle.*
+import com.outcomehealth.challenge.data.DataResult
+import com.outcomehealth.challenge.data.GalleryItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

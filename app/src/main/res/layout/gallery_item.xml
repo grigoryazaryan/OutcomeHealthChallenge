@@ -4,21 +4,23 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:padding="@dimen/margin_extra_small">
 
     <ImageView
         android:id="@+id/thumbnail"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_height="0dp"
         android:scaleType="centerCrop"
+        app:layout_constraintDimensionRatio="5:3"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/padding"
-        app:layout_constraintBottom_toBottomOf="@id/thumbnail"
+        android:padding="@dimen/margin_extra_small"
+        android:textSize="@dimen/text_caption"
         app:layout_constraintTop_toBottomOf="@id/thumbnail"
         tools:text="title" />
 </androidx.constraintlayout.widget.ConstraintLayout>
