@@ -10,4 +10,4 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 @Parcelize
-data class GalleryItem(val title: String, val url: String): Parcelable
+data class GalleryItem(val title: String, val url: String, var durationSec: Long = 0): Parcelable

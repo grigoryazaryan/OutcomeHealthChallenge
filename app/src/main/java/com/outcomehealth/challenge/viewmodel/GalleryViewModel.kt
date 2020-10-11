@@ -3,6 +3,7 @@ package com.outcomehealth.challenge.viewmodel
 import androidx.lifecycle.*
 import com.outcomehealth.challenge.data.DataResult
 import com.outcomehealth.challenge.data.GalleryItem
+import com.outcomehealth.challenge.repository.GalleryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,6 +17,11 @@ import java.net.URL
 
 class GalleryViewModel(private val state: SavedStateHandle) : ViewModel() {
     private val GALLERY_LIST = "gallery_list"
+
+    // todo inject from outside
+    private val repository: GalleryRepository by lazy {
+        GalleryRepository()
+    }
 
     private val _liveData: MutableLiveData<DataResult<List<GalleryItem>>> by lazy {
         // get persisted data or empty list
@@ -34,11 +40,11 @@ class GalleryViewModel(private val state: SavedStateHandle) : ViewModel() {
     }
 
     fun refresh() {
-        // notify view that data is refreshing
+        // notify view that data is being updated
         _liveData.value = DataResult.Loading
 
         viewModelScope.launch {
-            val apiResponseResult = loadGallery()
+            val apiResponseResult = repository.loadGallery()
 
             // save fresh data
             if (apiResponseResult is DataResult.Success) {
@@ -46,20 +52,6 @@ class GalleryViewModel(private val state: SavedStateHandle) : ViewModel() {
             }
 
             _liveData.value = apiResponseResult
-        }
-    }
-
-    // todo refactor
-    private suspend fun loadGallery(): DataResult<List<GalleryItem>> = withContext(Dispatchers.Default) {
-        try {
-            // get text from downloaded file
-            val stringResp = URL("https://bit.ly/2MIjM4F").readText()
-            // parse using Kotlin Serialization
-            val parsed = Json.decodeFromString<List<GalleryItem>>(stringResp)
-
-            return@withContext DataResult.Success(parsed)
-        } catch (e: Exception) {
-            return@withContext DataResult.Error(e)
         }
     }
 

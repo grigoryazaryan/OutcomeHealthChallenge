@@ -14,7 +14,8 @@ import com.google.android.exoplayer2.SimpleExoPlayer
 import com.outcomehealth.challenge.adapter.GalleryRecyclerAdapter
 import com.outcomehealth.challenge.data.DataResult
 import com.outcomehealth.challenge.data.GalleryItem
-import com.outcomehealth.challenge.helper.OrientationChangedListener
+import com.outcomehealth.challenge.util.ExoPlayerHelper
+import com.outcomehealth.challenge.util.OrientationChangedListener
 import com.outcomehealth.challenge.viewmodel.GalleryViewModel
 import kotlinx.android.synthetic.main.activity_main.*
 import timber.log.Timber
@@ -24,7 +25,7 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel by viewModels<GalleryViewModel>()
 
-    private var galleryRecyclerAdapter: GalleryRecyclerAdapter = GalleryRecyclerAdapter()
+    private var galleryRecyclerAdapter: GalleryRecyclerAdapter = GalleryRecyclerAdapter(this)
 
     private lateinit var player: SimpleExoPlayer
 
@@ -38,16 +39,11 @@ class MainActivity : AppCompatActivity() {
         // refresh data on swipe
         swipe_refresh.setOnRefreshListener { viewModel.refresh() }
 
-        // setting up recyclerview
-        galleryRecyclerAdapter = GalleryRecyclerAdapter()
-        galleryRecyclerAdapter.setItemClickListener { item, position, _ ->
-            player.seekTo(position, 0)
-            player.play()
-        }
+        setupGalleryList()
 
-        val layoutManager = GridLayoutManager(this, 2)
-        recycler.layoutManager = layoutManager
-        recycler.adapter = galleryRecyclerAdapter
+        setupPlayer()
+
+        initFullscreenDialog()
 
         // subscribing to data
         viewModel.getGalleryLiveData().observe(this) { value ->
@@ -67,67 +63,95 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        setupPlayer()
-
+        // subscribe to device orientation changes
         OrientationChangedListener(this, this) { orientation ->
+            // change activity's orientation and fullscreen dialog's respectively
             requestedOrientation = orientation
 
-            if (orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE || orientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE){
+            if (orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE || orientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) {
                 openFullscreen()
             } else {
                 closeFullscreen()
             }
         }
 
-        fullscreenDialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        fullscreenDialog.setCancelable(false)
-
     }
 
-    private fun openFullscreen(){
-        fullscreenDialog.show()
-        (video_view.parent as? ViewGroup)?.removeView(video_view)
-        fullscreenDialog.addContentView(video_view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    override fun onPause() {
+        super.onPause()
+        player.pause()
     }
 
-    private fun closeFullscreen(){
-        (video_view.parent as? ViewGroup)?.removeView(video_view)
-        video_view_container.addView(video_view, 0, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        fullscreenDialog.dismiss()
+    private fun setupGalleryList() {
+//        galleryRecyclerAdapter = GalleryRecyclerAdapter(this)
+        galleryRecyclerAdapter.setItemClickListener { item, position, _ ->
+            player.seekTo(position, 0)
+            player.play()
+        }
+
+        val layoutManager = GridLayoutManager(this, 2)
+        recycler.layoutManager = layoutManager
+        recycler.adapter = galleryRecyclerAdapter
     }
 
     private fun setupPlayer() {
-        // todo caching https://alexandroid.net/exoplayer-buffering-and-cache-code-sample/
-//        val cacheDataSourceFactory = CacheDataSource.Factory()
-//            .setCache(SimpleCache())
-//            .setUpstreamDataSourceFactory(httpDataSourceFactory)
 
-        player = SimpleExoPlayer.Builder(this)
-//            .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
-            .build()
+        player = ExoPlayerHelper.createSimplePlayerWithCaching(this)
 
-        player.addListener(object : Player.EventListener {
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                mediaItem?.let {
-                    val playingItem = it.playbackProperties?.tag as? GalleryItem
-                    video_title.text = playingItem?.title
+        player.addListener(
+            object : Player.EventListener {
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    val playingItem = mediaItem?.playbackProperties?.tag as? GalleryItem
+                    playingItem?.let {
+                        onMediaItemChanged(it)
+                    }
                 }
-            }
-        })
+            })
+
         video_view.player = player
     }
 
+    private fun onMediaItemChanged(playingItem: GalleryItem) {
+        video_title.text = playingItem.title
+        galleryRecyclerAdapter.selectItem(playingItem)
+    }
+
     private fun setPlaylist(items: List<GalleryItem>) {
+        val mediaItems = mutableListOf<MediaItem>()
+
         for (item in items) {
             val mediaItem: MediaItem = MediaItem.Builder()
                 .setUri(item.url)
                 .setTag(item)
                 .build()
 
-            player.addMediaItem(mediaItem)
+            mediaItems.add(mediaItem)
         }
+
+        player.setMediaItems(mediaItems)
 
         player.prepare()
         player.play()
+    }
+
+    private fun initFullscreenDialog() {
+        fullscreenDialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        fullscreenDialog.setCancelable(false)
+    }
+
+    private fun openFullscreen() {
+        fullscreenDialog.show()
+        // detach video view from the main layout
+        (video_view.parent as? ViewGroup)?.removeView(video_view)
+        // attach it to the dialog
+        fullscreenDialog.addContentView(video_view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+
+    private fun closeFullscreen() {
+        // detach video view from the dialog
+        (video_view.parent as? ViewGroup)?.removeView(video_view)
+        // attach it to the main layout
+        video_view_container.addView(video_view, 0, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        fullscreenDialog.dismiss()
     }
 }

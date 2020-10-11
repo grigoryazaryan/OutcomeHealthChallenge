@@ -1,4 +1,4 @@
-package com.outcomehealth.challenge.helper
+package com.outcomehealth.challenge.util
 
 import android.content.Context
 import android.content.pm.ActivityInfo
